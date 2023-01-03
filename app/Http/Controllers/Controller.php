@@ -46,4 +46,25 @@ class Controller extends BaseController
 
         return response()->json($response, $code);
     }
+	
+	public function handlingErrorCatch($data)
+	{
+		$message = [];
+		$string = '';
+		$cek = is_array($data);
+		if($cek == true)
+		{
+			$string = 'Error while process data';
+			foreach($data as $messageerror)
+			{
+				array_push($message, $messageerror);
+			}
+		}
+		else
+		{
+			$string = $data;
+		}
+		
+		$this->sendError($string, $message);
+	}
 }

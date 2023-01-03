@@ -20,6 +20,14 @@ class Token
 		$cekdata = DB::table('oauth_access_tokens')->where('id', $token)->count();
 		if($cekdata == 1)
 		{
+			$getid = DB::table('oauth_access_tokens')->where('id', $token)->first();
+			$data = DB::table('users')->where('id', $getid->user_id)->first();
+			$request->merge([
+				"userid" => $data->id,
+				"name" => $data->name,
+				"email" => $data->email,
+			]);
+			
 			return $next($request);
 		}
 		else
