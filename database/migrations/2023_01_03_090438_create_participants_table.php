@@ -18,7 +18,7 @@ class CreateParticipantsTable extends Migration
 			$table->unsignedBigInteger('group_id');
 			$table->foreign('group_id')->references('id')->on('groups');
 			$table->integer('user_id');
-			$table->boolean('read_status')->default(false);
+			$table->integer('read_count')->default(0);
 			$table->timestamps();
 			$table->integer('created_by');
 			$table->integer('updated_by');

@@ -25,6 +25,7 @@ Route::group(['prefix' => 'account', 'as' => 'Account.'], function () {
 
 Route::group(['prefix' => 'chat', 'as' => 'Chat.', 'middleware' => 'token'], function () {
     Route::get('indexbychat/{id}', 'ChatController@indexbychat')->name('indexbychat');
+    Route::get('show/{id}', 'ChatController@show')->name('show');
     Route::get('readstatus/{id}', 'ChatController@changeReadStatus')->name('changeReadStatus');
     Route::post('store', 'ChatController@store')->name('store');
 });

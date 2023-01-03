@@ -13,10 +13,55 @@ use Session;
 
 class ChatController extends BaseController
 {
-	//melihat percakapan detail berdasarkan group id yang dipilih
+	//melihat percakapan terakhir, participant dan total pesan yang belum terbaca berdasarkan group id yang dipilih
 	public function indexbychat(Request $request, $id)
 	{
-		$database = DB::table('messages')->where('group_id', $id)->orderBy('id', 'desc')->get();
+		$chat = DB::table('messages')->where('group_id', $id)->orderBy('id', 'desc')->first();
+		$participants = DB::table('participants')->where('group_id', $id)->get();
+		$title = 'Percakapan antara ';
+		$member = '';
+		$unread = 0;
+		$i = 0;
+		foreach($participants as $getname)
+		{
+			$getnamevalue = DB::table('users')->where('id', $getname->user_id)->limit(1)->value('name');
+			
+			if($getname->user_id == $request->userid)
+			{
+				$unread = $getname->read_count;
+			}
+			
+			$title = $title.$getnamevalue;
+			
+			if($getname->user_id != $request->userid)
+			{
+				$member = $member.$getnamevalue;
+			}
+			
+			if($i == count($participants) - 1)
+			{
+				$title = $title.'.';
+				$member = $member.'.';
+			}
+			else
+			{
+				$title = $title.' dan ';
+				$member = $member.', ';
+			}
+			$i++;
+		}
+		$senddata = [
+			'recent_message' => $chat->messages,
+			'participant' => $member,
+			'unread_count' => $unread,
+		];
+		
+		return $this->sendResponse(true, $senddata, $title);
+	}
+	
+	public function show(Request $request, $id)
+	{
+		$chat = DB::table('messages')->where('group_id', $id)->orderBy('id', 'desc')->get();
 		$participants = DB::table('participants')->where('group_id', $id)->get();
 		$title = 'Percakapan antara ';
 		$i = 0;
@@ -25,6 +70,7 @@ class ChatController extends BaseController
 			$getnamevalue = DB::table('users')->where('id', $getname->user_id)->limit(1)->value('name');
 			
 			$title = $title.$getnamevalue;
+			
 			if($i == count($participants) - 1)
 			{
 				$title = $title.'.';
@@ -35,13 +81,8 @@ class ChatController extends BaseController
 			}
 			$i++;
 		}
-		return $this->sendResponse(true, $database, $title);
-	}
-	
-	//mencari list percakapan berdasarkan target yang dipilih dan si pengirim berdasarkan token
-	public function indexbyuser(Request $request)
-	{
 		
+		return $this->sendResponse(true, $chat, $title);
 	}
 	
 	//membuat percakapan baru serta membalas pesan para user
@@ -80,8 +121,17 @@ class ChatController extends BaseController
 				'updated_by' => $request->userid,
 			]);
 			
-			DB::table('participants')->where('group_id', $group)->update(['read_status' => false]);
-			DB::table('participants')->where('group_id', $group)->where('user_id', $request->userid)->update(['read_status' => true]);
+			DB::table('participants')->where('group_id', $group)->where('user_id', $request->userid)->update(['read_count' => 0]);
+			$getdata = DB::table('participants')->where('group_id', $group)->where('user_id', '<>', $request->userid)->get();
+			foreach($getdata as $showdata)
+			{
+				DB::table('participants')
+					->where('group_id', $group)
+					->where('user_id', $showdata->user_id)
+					->update([
+						'read_count' => (int) $showdata->read_count + 1,
+					]);
+			}
 			
 			$inputdata = [
 				'from' => $request->userid,
@@ -125,7 +175,7 @@ class ChatController extends BaseController
 			DB::table('participants')->insert([
 				'group_id' => $getid,
 				'user_id' => $inputparticipant,
-				'read_status' => ($inputparticipant == $from ? true : false),
+				'read_count' => 0,
 				'created_at' => $now,
 				'created_by' => $from,
 				'updated_by' => $from,
@@ -141,7 +191,7 @@ class ChatController extends BaseController
 		DB::beginTransaction();
 		try
 		{
-			DB::table('participants')->where('group_id', $id)->where('user_id', $request->userid)->update([ 'read_status' => true ]);
+			DB::table('participants')->where('group_id', $id)->where('user_id', $request->userid)->update([ 'read_count' => 0 ]);
 			DB::commit();
 			
 			return $this->sendResponse(true, [], 'Message successfully readed');
